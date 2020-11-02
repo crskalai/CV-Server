@@ -40,10 +40,29 @@ exports.getMenuDetails = async function (pId, rId){
     });
 }
 
-var missQry = "SELECT * FROM mission_details WHERE mission_status=1";
-exports.getMissionDetails = async function (pId, rId){
+var missQry = "call procMissionSelect(?,?)";//"SELECT * FROM mission_details WHERE mission_status=1";
+exports.getMissionDetails = async function (rId, uId){
   return new Promise((resolve, reject) => {
-      dbconnection.query(missQry, (err, result) => {
+      dbconnection.query(missQry, [rId, uId], (err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+
+var cntQry = "call procCountrySelect(?,?)";
+exports.getCountryDetails = async function (rId, uId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(cntQry, [rId, uId], (err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+var vacQry = "call procVacSelect(?,?)";
+exports.getVACDetails = async function (rId, uId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(vacQry, [rId, uId], (err, result) => {
           return err ? reject(err) : resolve(result);
         } );
       dbconnection.releaseConnection;
@@ -60,10 +79,10 @@ exports.getVisaDetails = async function (pId, rId){
     });
 }
 
-var vacQry = "SELECT * FROM vac_details WHERE vac_status=1";
-exports.getVACDetails = async function (pId, rId){
+var roleQry = "select * from user_roles where role_status=1";
+exports.getRoleDetails = async function (){
   return new Promise((resolve, reject) => {
-      dbconnection.query(vacQry, (err, result) => {
+      dbconnection.query(roleQry, (err, result) => {
           return err ? reject(err) : resolve(result);
         } );
       dbconnection.releaseConnection;
@@ -116,6 +135,26 @@ exports.getTest4 = async function (pId, rId){
     });
 }
 
+var t5 = "select string_code,string_name from language_strings where group_id=1";
+exports.getTest5 = async function (pId, rId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(t5, (err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+
+var chkQry = "select count(*) as Total from user_details where password=? and user_id=?";
+exports.checkPassword = async function (pass, uId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(chkQry, [pass, uId],(err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+
 var passQry = "SELECT password FROM password_history WHERE user_id=? order by pass_history_id desc limit 5";
 exports.getPasswordHistory = async function (uId){
   return new Promise((resolve, reject) => {
@@ -156,10 +195,10 @@ exports.updateUserStatus = async function (cur_dt, uId){
     });
 }
 
-var upPassQry = "UPDATE user_details SET password = ? WHERE user_id = ?";
-exports.updatePassword = async function (pass, uId){
+var upPassQry = "UPDATE user_details SET password = ?, expired_on = ? WHERE user_id = ?";
+exports.updatePassword = async function (pass, cur_dt, uId){
   return new Promise((resolve, reject) => {
-      dbconnection.query(upPassQry, [pass, uId],(err, result) => {
+      dbconnection.query(upPassQry, [pass, cur_dt, uId],(err, result) => {
           return err ? reject(err) : resolve(result);
         } );
       dbconnection.releaseConnection;
@@ -170,6 +209,27 @@ exports.insertPasswordHistory = async function (query){
   return new Promise((resolve, reject) => {
       dbconnection.query(query, (err, result) => {
           return err ? reject(err) : resolve(result.insertId);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+var perQry = "SELECT is_add,is_edit,is_delete FROM menu_matrix WHERE role_id=? AND menu_id=? limit 1";
+exports.getPermission = async function (rId,mId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(perQry, [rId,mId],(err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+
+var sessQry = "SELECT us.partner_id,us.user_id,us.role_id,mm.is_add,mm.is_edit,mm.is_delete \
+FROM user_sessions us LEFT JOIN menu_matrix mm ON us.role_id=mm.role_id \
+WHERE us.session_id = ? AND us.session_token = ? AND mm.menu_id=? LIMIT 1";
+exports.sessionDetails = async function (session_id,session_token,menu_id){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(sessQry, [session_id,session_token,menu_id],(err, result) => {
+          return err ? reject(err) : resolve(result);
         } );
       dbconnection.releaseConnection;
     });

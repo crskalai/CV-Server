@@ -1,5 +1,6 @@
 var dboLogin = require("../../dboperations/dboLogin");
 var CryptoJS = require("crypto-js");
+const decodeUriComponent = require('decode-uri-component');
 
 const Str = require('@supercharge/strings');
 let authKey = Str.random(16);
@@ -58,13 +59,11 @@ exports.changepassword = async function(req,res,next){
 exports.login = async function(req, res, next){
     let result1;
     var jsonData = req.query.params;   
-    var reqparam = JSON.parse(jsonData);
-    var t = reqparam.password;
-    console.log(t);
-    var bytes  = CryptoJS.AES.decrypt(reqparam.password, '8080808080808080');
-    var originalText = bytes.toString(CryptoJS.enc.Utf8);
+    var reqparamClient = JSON.parse(jsonData);
+    console.log(reqparamClient);
+    var decrypted = CryptoJS.AES.decrypt(decodeUriComponent(reqparamClient.Request), '8080808080808080');
+    var reqparam = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
     console.log(reqparam);
-    console.log(originalText);
     var result = await dboLogin.getLogin(reqparam.user_name,reqparam.password,reqparam.partnerCode,reqparam.ipAdd);
     var rows = JSON.parse(JSON.stringify(result[0]));
     if(rows[0].response == 0)
@@ -84,23 +83,46 @@ exports.login = async function(req, res, next){
         
         let dt = Date.now();
         var qry = "insert into user_sessions (partner_id,user_id,session_token,auth_key,login_time,last_ping,status_since,ip_address,login_group_id,role_id,language_id,login_status) values(" + rows[0].pId + "," + rows[0].userId + ",'" + sessToken + "','" + authKey + "','" + cur_dt + "','" + cur_dt + "','" + cur_dt + "','" + reqparam.ipAdd + "'," + rows[0].loginGroupId + "," + rows[0].roleId + "," + rows[0].lId +",1)";
-        
         var result = await dboLogin.insertUserSession(qry);
         var result_user = await dboLogin.updateUserDetails(cur_dt,result);
-        var missObj = await dboLogin.getMissionDetails();
+        
+        var userId = rows[0].userId;
+        var roleId = rows[0].roleId;
+        var missObj = await dboLogin.getMissionDetails(roleId, userId); 
+        var countryObj = await dboLogin.getCountryDetails(roleId, userId);
         var visaObj = await dboLogin.getVisaDetails();
-        var vacObj = await dboLogin.getVACDetails();
+        var vacObj = await dboLogin.getVACDetails(roleId, userId);
+        var roleObj = await dboLogin.getRoleDetails();
         //console.log(result);  //last inserted id
         sessId = result;
         var menuObj = await dboLogin.getMenuDetails(rows[0].pId,rows[0].roleId);
-        result1 = menuObj;
+        
+        // var result = await dboLogin.insertUserSession(qry);
+        // var result_user = await dboLogin.updateUserDetails(cur_dt,result);
+        // var missObj = await dboLogin.getMissionDetails();
+        // var visaObj = await dboLogin.getVisaDetails();
+        // var vacObj = await dboLogin.getVACDetails();
+        // //console.log(result);  //last inserted id
+        // sessId = result;
+        // var menuObj = await dboLogin.getMenuDetails(rows[0].pId,rows[0].roleId);
+        // result1 = menuObj;
+
+        var json = {All:rows[0], Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:menuObj, SessionToken: sessToken, SessionId: sessId, Mission: missObj, Country: countryObj,VAC: vacObj, Visa: visaObj, Roles: roleObj};
+        //var json = {VISA: visaObj,Role: roleObj};
+        console.log("RESPONSE-1");
+        result1 = CryptoJS.AES.encrypt(JSON.stringify(json), '8080808080808080').toString();
     }
     else
     {
         sessId = "";
         sessToken = "";
+        var json = {All:rows[0], Response:rows[0].response, SessionToken: sessToken, SessionId: sessId};
+        console.log("RESPONSE-2");
+        result1 = CryptoJS.AES.encrypt(JSON.stringify(json), '8080808080808080').toString();
     }
-    res.status(200).send({All:rows[0], Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:result1, SessionToken: sessToken, SessionId: sessId, Mission: missObj, Visa: visaObj, VAC: vacObj});
+    //res.status(200).send(result1);
+     res.status(200).send({Response: result1});
+    //res.status(200).send({All:rows[0], Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:result1, SessionToken: sessToken, SessionId: sessId, Mission: missObj, Visa: visaObj, VAC: vacObj});
     //res.status(200).send({Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:result1, SessionToken: sessToken, SessionId: sessId});
 }
 
