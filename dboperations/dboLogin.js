@@ -89,6 +89,16 @@ exports.getRoleDetails = async function (){
     });
 }
 
+var checkQry = "select * from check_type_master where check_type_status=1 and partner_id=?";
+exports.getCheckTypeDetails = async function (pId){
+  return new Promise((resolve, reject) => {
+      dbconnection.query(roleQry, [pId],(err, result) => {
+          return err ? reject(err) : resolve(result);
+        } );
+      dbconnection.releaseConnection;
+    });
+}
+
 var t = "select * from language_strings where group_id=6";
 exports.getTest = async function (pId, rId){
   return new Promise((resolve, reject) => {

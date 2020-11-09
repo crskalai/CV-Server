@@ -66,6 +66,7 @@ exports.login = async function(req, res, next){
     console.log(reqparam);
     var result = await dboLogin.getLogin(reqparam.user_name,reqparam.password,reqparam.partnerCode,reqparam.ipAdd);
     var rows = JSON.parse(JSON.stringify(result[0]));
+    console.log(rows);
     if(rows[0].response == 0)
     {
         sessToken = Str.random(16);
@@ -93,6 +94,7 @@ exports.login = async function(req, res, next){
         var visaObj = await dboLogin.getVisaDetails();
         var vacObj = await dboLogin.getVACDetails(roleId, userId);
         var roleObj = await dboLogin.getRoleDetails();
+        var checkObj = await dboLogin.getCheckTypeDetails(rows[0].pId);
         //console.log(result);  //last inserted id
         sessId = result;
         var menuObj = await dboLogin.getMenuDetails(rows[0].pId,rows[0].roleId);
@@ -107,7 +109,7 @@ exports.login = async function(req, res, next){
         // var menuObj = await dboLogin.getMenuDetails(rows[0].pId,rows[0].roleId);
         // result1 = menuObj;
 
-        var json = {All:rows[0], Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:menuObj, SessionToken: sessToken, SessionId: sessId, Mission: missObj, Country: countryObj,VAC: vacObj, Visa: visaObj, Roles: roleObj};
+        var json = {All:rows[0], Response:rows[0].response, MaxAttempt:rows[0].maxAttempt,UserId: rows[0].userId, Menu:menuObj, SessionToken: sessToken, SessionId: sessId, Mission: missObj, Country: countryObj,VAC: vacObj, Visa: visaObj, Roles: roleObj, CheckType: checkObj};
         //var json = {VISA: visaObj,Role: roleObj};
         console.log("RESPONSE-1");
         result1 = CryptoJS.AES.encrypt(JSON.stringify(json), '8080808080808080').toString();
